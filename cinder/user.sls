@@ -1,11 +1,12 @@
-{%- if not salt['user.info']('cinder') %}
+{%- from "cinder/map.jinja" import user with context -%}
 cinder_user:
   user.present:
-    - name: cinder
-    - home: /var/lib/cinder
-    - uid: 304
-    - gid: 304
-    - shell: /bin/false
+    - name: {{user.user.name}}
+    - home: {{user.user.home}}
+    - uid: {{user.user.uid}}
+    - gid: {{user.group.gid}}
+    - groups: {{user.user.groups|json}}
+    - shell: {{user.user.shell}}
     - system: True
     - require_in:
       {%- if pillar.cinder.controller is defined and pillar.cinder.controller.enabled %}
@@ -17,9 +18,8 @@ cinder_user:
 
 cinder_group:
   group.present:
-    - name: cinder
-    - gid: 304
+    - name: {{user.group.name}}
+    - gid: {{user.group.gid}}
     - system: True
     - require_in:
       - user: cinder_user
-{%- endif %}

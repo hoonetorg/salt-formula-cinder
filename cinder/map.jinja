@@ -1,5 +1,38 @@
+{% import_yaml 'cinder/defaults_controller.yaml' as controller %}
+{% import_yaml 'cinder/defaults_volume.yaml' as volume %}
 
-{% set controller = salt['grains.filter_by']({
+{% set user = salt['grains.filter_by']({
+    'Debian': {
+        'group': {
+          'name': 'cinder',
+          'gid': '304',
+        },
+        'user': {
+          'name': 'cinder',
+          'uid': '304',
+          'home': '/var/lib/cinder',
+          'shell': '/bin/false',
+          'fullname': 'OpenStack Cinder Daemons',
+          'groups': ['cinder'],
+        },
+    },
+    'RedHat': {
+        'group': {
+          'name': 'cinder',
+          'gid': '165',
+        },
+        'user': {
+          'name': 'cinder',
+          'uid': '165',
+          'home': '/var/lib/cinder',
+          'shell': '/sbin/nologin',
+          'fullname': 'OpenStack Cinder Daemons',
+          'groups': ['nobody', 'cinder'],
+        },
+    },
+}, merge=salt['pillar.get']('cinder:user')) %}
+
+{% set os_controller = salt['grains.filter_by']({
     'Debian': {
         'pkgs': ['cinder-api', 'cinder-scheduler', 'lvm2', 'python-cinder', 'gettext-base', 'python-memcache'],
         'services': ['cinder-api', 'cinder-scheduler'],
@@ -13,8 +46,9 @@
         'notification': False,
     },
 }, merge=salt['pillar.get']('cinder:controller')) %}
+{% do controller.update(os_controller) %}
 
-{% set volume = salt['grains.filter_by']({
+{% set os_volume = salt['grains.filter_by']({
     'Debian': {
         'pkgs': ['cinder-volume', 'lvm2', 'sysfsutils', 'sg3-utils', 'python-cinder','python-mysqldb','p7zip', 'gettext-base', 'python-memcache'],
         'services': ['cinder-volume'],
@@ -28,3 +62,4 @@
         'notification': False,
     },
 }, merge=salt['pillar.get']('cinder:volume')) %}
+{% do volume.update(os_volume) %}
