@@ -1,0 +1,136 @@
+{%- from "cinder/map.jinja" import controller with context -%}
+{%- from "cinder/map.jinja" import volume with context -%}
+
+{%- set server = {} %}
+{%- if controller.get('enabled', False) %}
+  {%- do server.update(controller) %}
+{%- endif %}
+{%- if volume.get('enabled', False) %}
+  {%- do server.update(volume) %}
+{%- endif %}
+#{# server|json#}
+
+
+[DEFAULT]
+rootwrap_config = /etc/cinder/rootwrap.conf
+api_paste_confg = /etc/cinder/api-paste.ini
+
+iscsi_helper = tgtadm
+volume_name_template = volume-%s
+#volume_group = cinder
+
+verbose = True
+
+auth_strategy = keystone
+
+state_path = /var/lib/cinder
+
+use_syslog=False
+
+glance_num_retries=0
+debug=False
+
+os_region_name={{ server.identity.region }}
+
+#glance_api_ssl_compression=False
+#glance_api_insecure=False
+
+osapi_volume_listen={{ server.osapi.host }}
+
+glance_host={{ server.glance.host }}
+glance_port={{ server.glance.port }}
+glance_api_version=2
+
+volume_backend_name=DEFAULT
+
+{%- if server.backend is defined %}
+
+default_volume_type={{ server.default_volume_type }}
+
+enabled_backends={% for backend_name, backend in server.get('backend', {}).iteritems() %}{{ backend_name }}{% if not loop.last %},{% endif %}{% endfor %}
+
+{%- endif %}
+
+#RPC response timeout recommended by Hitachi
+rpc_response_timeout=3600
+
+#Rabbit
+rpc_backend=cinder.openstack.common.rpc.impl_kombu
+control_exchange=cinder
+
+
+volume_clear={{ server.wipe_method }}
+
+
+
+volume_name_template = volume-%s
+
+#volume_group = vg_cinder_volume
+
+volumes_dir = /var/lib/cinder/volumes
+log_dir=/var/log/cinder
+
+# Use syslog for logging. (boolean value)
+#use_syslog=false
+
+use_syslog=false
+verbose=True
+lock_path=/var/lock/cinder
+
+[oslo_messaging_notifications]
+{%- if server.notification %}
+driver = messagingv2
+{%- endif %}
+
+[oslo_concurrency]
+
+lock_path=/var/lock/cinder
+
+[oslo_messaging_rabbit]
+{%- if server.message_queue.members is defined %}
+rabbit_hosts = {% for member in server.message_queue.members -%}
+                   {{ member.host }}:{{ member.get('port', 5672) }}
+                   {%- if not loop.last -%},{%- endif -%}
+               {%- endfor -%}
+{%- else %}
+rabbit_host = {{ server.message_queue.host }}
+rabbit_port = {{ server.message_queue.port }}
+{%- endif %}
+
+rabbit_userid = {{ server.message_queue.user }}
+rabbit_password = {{ server.message_queue.password }}
+rabbit_virtual_host = {{ server.message_queue.virtual_host }}
+kombu_reconnect_delay=5.0
+
+[keystone_authtoken]
+signing_dir=/tmp/keystone-signing-cinder
+revocation_cache_time = 10
+auth_type = password
+user_domain_id = {{ server.identity.get('domain', 'default') }}
+project_domain_id = {{ server.identity.get('domain', 'default') }}
+project_name = {{ server.identity.tenant }}
+username = {{ server.identity.user }}
+password = {{ server.identity.password }}
+auth_uri=http://{{ server.identity.host }}:5000
+auth_url=http://{{ server.identity.host }}:35357
+{%- if server.cache is defined %}
+memcached_servers={%- for member in server.cache.members %}{{ member.host }}:11211{% if not loop.last %},{% endif %}{%- endfor %}
+{%- endif %}
+
+[database]
+idle_timeout=3600
+max_pool_size=30
+max_retries=-1
+max_overflow=40
+connection = {{ server.database.engine }}+pymysql://{{ server.database.user }}:{{ server.database.password }}@{{ server.database.host }}/{{ server.database.name }}
+
+{%- if server.backend is defined %}
+
+{%- for backend_name, backend in server.get('backend', {}).iteritems() %}
+
+{%- set backend_fragment = "cinder/files/backend/_" + backend.engine + ".conf" %}
+{%- include backend_fragment %}
+
+{%- endfor %}
+
+{%- endif %}

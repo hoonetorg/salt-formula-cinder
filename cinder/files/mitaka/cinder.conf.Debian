@@ -1,0 +1,174 @@
+{%- from "cinder/map.jinja" import controller with context -%}
+{%- from "cinder/map.jinja" import volume with context -%}
+
+{%- set server = {} %}
+{%- if controller.get('enabled', False) %}
+  {%- do server.update(controller) %}
+{%- endif %}
+{%- if volume.get('enabled', False) %}
+  {%- do server.update(volume) %}
+{%- endif %}
+#{# server|json#}
+
+
+[DEFAULT]
+#option missing in default mitaka config
+#default value - comment out FIXME: check if /var/lib/cinder is populated - there was a bug
+#state_path = /var/lib/cinder
+
+#l465
+#default - comment out
+#glance_num_retries = 0
+
+#l449
+glance_host = {{ server.glance.host }}
+#l454
+glance_port = {{ server.glance.port }}
+#l462
+glance_api_version = 2
+#l468
+#glance_api_insecure = False
+#l474
+#glance_api_ssl_compression = False
+
+{%- if server.backend is defined %}
+#l539
+default_volume_type = {{ server.default_volume_type }}
+#l571
+enabled_backends = {% for backend_name, backend in server.get('backend', {}).iteritems() %}{{ backend_name }}{% if not loop.last %},{% endif %}{% endfor %}
+{%- endif %}
+
+#l547
+#default - comment out
+#rootwrap_config = /etc/cinder/rootwrap.conf
+
+#l567
+auth_strategy = keystone
+
+#l786
+osapi_volume_listen = {{ server.osapi.host }}
+
+#l1134
+#default - comment out
+#volume_name_template = volume-%s
+
+#l1264
+#FIXME: find out if and why this must be set
+#let's try without - comment out
+#volume_backend_name = DEFAULT
+
+#l1277
+volume_clear = {{ server.wipe_method }}
+
+#l1292
+#nowadays we use lio(lioadm), let's not set it to some obsolete - comment out
+#iscsi_helper = tgtadm
+
+#l1295
+#default ($state_path/volumes, state_path=/var/lib/cinder) - comment out
+#volumes_dir = /var/lib/cinder/volumes
+
+#l1529
+#will be set in backend settings
+#volume_group = cinder
+
+#l2096
+os_region_name = {{ server.identity.region|default('RegionOne') }}
+
+#l2409
+{%- if server.debug %}
+debug = True
+{%- else %}
+debug = False
+{%- endif %}
+
+#l2415
+#obsolete - comment out
+#verbose = True
+
+#l2440
+#we set this in other components too - ok let's set this here
+log_dir = /var/log/cinder
+
+#l2452
+#default - comment out
+#use_syslog = False
+
+#l2622
+#typo confg should be config
+#default - comment out
+#api_paste_config = /etc/cinder/api-paste.ini
+
+#l2568
+#RPC response timeout recommended by Hitachi
+#we won't try this, because calls come back after an hour -> comment out(FIXME: set this if needed)
+#see also https://access.redhat.com/solutions/2388741 -> not recommended
+#rpc_response_timeout = 3600
+
+#l2577
+#obsolete
+#rpc_backend = cinder.openstack.common.rpc.impl_kombu
+rpc_backend = rabbit
+
+#l2581
+#seems to be necessary for rabbitmq 
+#default value for non rabbitmq is control_exchange = openstack
+control_exchange = cinder
+
+[database]
+idle_timeout = 3600
+max_pool_size = 30
+max_retries = -1
+max_overflow = 40
+connection = {{ server.database.engine }}+pymysql://{{ server.database.user }}:{{ server.database.password }}@{{ server.database.host }}/{{ server.database.name }}
+
+[keystone_authtoken]
+signing_dir = /tmp/keystone-signing-cinder
+revocation_cache_time = 10
+auth_type = password
+user_domain_id = {{ server.identity.get('domain', 'default') }}
+project_domain_id = {{ server.identity.get('domain', 'default') }}
+project_name = {{ server.identity.tenant }}
+username = {{ server.identity.user }}
+password = {{ server.identity.password }}
+auth_uri = http://{{ server.identity.host }}:5000
+auth_url = http://{{ server.identity.host }}:35357
+{%- if server.cache is defined %}
+memcached_servers = {%- for member in server.cache.members %}{{ member.host }}:11211{% if not loop.last %},{% endif %}{%- endfor %}
+{%- endif %}
+
+[oslo_concurrency]
+
+lock_path = /var/lock/cinder
+
+[oslo_messaging_notifications]
+{%- if server.notification %}
+driver = messagingv2
+{%- endif %}
+
+[oslo_messaging_rabbit]
+{%- if server.message_queue.members is defined %}
+rabbit_hosts = {% for member in server.message_queue.members -%}
+                   {{ member.host }}:{{ member.get('port', 5672) }}
+                   {%- if not loop.last -%},{%- endif -%}
+               {%- endfor -%}
+{%- else %}
+rabbit_host = {{ server.message_queue.host }}
+rabbit_port = {{ server.message_queue.port }}
+{%- endif %}
+
+rabbit_userid = {{ server.message_queue.user }}
+rabbit_password = {{ server.message_queue.password }}
+rabbit_virtual_host = {{ server.message_queue.virtual_host }}
+kombu_reconnect_delay = 5.0
+
+{%- if server.backend is defined %}
+
+{%- for backend_name, backend in server.get('backend', {}).iteritems() %}
+
+{%- set backend_fragment = "cinder/files/backend/_" + backend.engine + ".conf" %}
+{%- include backend_fragment %}
+
+{%- endfor %}
+
+{%- endif %}
