@@ -58,6 +58,7 @@ osapi_volume_listen = {{ server.osapi.host }}
 #volume_backend_name = DEFAULT
 
 #l1277
+#for ceph rbd not used according to https://openstack.nimeyo.com/65040/openstack-operators-cinder-api-with-driver-ignores-ceph-conf
 volume_clear = {{ server.wipe_method }}
 
 #l1292
