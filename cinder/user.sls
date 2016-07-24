@@ -8,13 +8,6 @@ cinder_user:
     - groups: {{user.user.groups|json}}
     - shell: {{user.user.shell}}
     - system: True
-    - require_in:
-      {%- if pillar.cinder.controller is defined and pillar.cinder.controller.enabled %}
-      - pkg: cinder_controller_packages
-      {%- endif %}
-      {%- if pillar.cinder.volume is defined and pillar.cinder.volume.enabled %}
-      - pkg: cinder_volume_packages
-      {%- endif %}
 
 cinder_group:
   group.present:

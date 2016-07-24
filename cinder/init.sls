@@ -1,8 +1,9 @@
 
 include:
+- cinder.configure
 {% if pillar.cinder.controller is defined %}
-- cinder.controller
+- cinder.service_controller
 {% endif %}
 {% if pillar.cinder.volume is defined %}
-- cinder.volume
+- cinder.service_volume
 {% endif %}
