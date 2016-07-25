@@ -13,39 +13,36 @@
 include:
 - cinder.packages
 
-/etc/cinder/cinder.conf:
+cinder_configure__file_/etc/cinder/cinder.conf:
   file.managed:
   - source: salt://cinder/files/{{ server.version }}/cinder.conf.{{ grains.os_family }}
   - template: jinja
   - require:
-    - pkg: cinder_packages
+    - pkg: cinder_packages__packages
 
-/etc/cinder/api-paste.ini:
+cinder_configure__file_/etc/cinder/api-paste.ini:
   file.managed:
   - source: salt://cinder/files/{{ server.version }}/api-paste.ini.{{ grains.os_family }}
   - template: jinja
   - require:
-    - pkg: cinder_packages
+    - pkg: cinder_packages__packages
 
 {%- if controller.get('enabled', False) %}
-cinder_syncdb:
+cinder_configure__syncdb:
   cmd.run:
   - name: cinder-manage db sync
   - require:
-    - file: /etc/cinder/cinder.conf
-    - file: /etc/cinder/api-paste.ini
+    - file: cinder_configure__file_/etc/cinder/cinder.conf
+    - file: cinder_configure__file_/etc/cinder/api-paste.ini
 {%- endif %}
 
 {%- if volume.get('enabled', False) %}
 
-/var/lock/cinder:
+cinder_configure__file_/var/lock/cinder:
   file.directory:
   - mode: 755
   - user: cinder
   - group: cinder
   - require:
-    - pkg: cinder_packages
-  - require_in:
-    - service: cinder_volume_services
+    - pkg: cinder_packages__packages
 {%- endif %}
-

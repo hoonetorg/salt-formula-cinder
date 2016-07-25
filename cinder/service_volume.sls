@@ -1,10 +1,10 @@
 {%- from "cinder/map.jinja" import volume with context %}
-{%- if volume.enabled %}
-cinder_volume_services:
-  service.running:
-  - names: {{ volume.services }}
-  - enable: true
-  - watch:
-    - file: /etc/cinder/cinder.conf
-    - file: /etc/cinder/api-paste.ini
+{%- if volume.get('enabled', False) %}
+cinder_service_volume__services:
+  service.{{ volume.service_state }}:
+    - names: {{ volume.services }}
+    {% if volume.service_state in [ 'running', 'dead' ] %}
+    - enable: {{ volume.service_enable }}
+    {% endif %}
 {%- endif %}
+

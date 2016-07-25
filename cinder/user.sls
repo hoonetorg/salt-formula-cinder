@@ -1,5 +1,5 @@
 {%- from "cinder/map.jinja" import user with context -%}
-cinder_user:
+cinder_user__user:
   user.present:
     - name: {{user.user.name}}
     - home: {{user.user.home}}
@@ -9,10 +9,10 @@ cinder_user:
     - shell: {{user.user.shell}}
     - system: True
 
-cinder_group:
+cinder_user__group:
   group.present:
     - name: {{user.group.name}}
     - gid: {{user.group.gid}}
     - system: True
     - require_in:
-      - user: cinder_user
+      - user: cinder_user__user

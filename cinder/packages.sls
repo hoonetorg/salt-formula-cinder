@@ -9,12 +9,12 @@ include:
 {%- if controller.get('enabled', False) %}
   {%- set pkgs = pkgs + controller.pkgs %}
 {%- endif %}
-{%- if compute.get('enabled', False) %}
-  {%- set pkgs = pkgs + compute.pkgs %}
+{%- if volume.get('enabled', False) %}
+  {%- set pkgs = pkgs + volume.pkgs %}
 {%- endif %}
 
-cinder_packages:
+cinder_packages__packages:
   pkg.installed:
   - names: {{ pkgs }}
   - require:
-    - user: cinder_user
+    - user: cinder_user__user
