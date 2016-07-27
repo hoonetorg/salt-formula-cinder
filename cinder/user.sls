@@ -7,6 +7,7 @@ cinder_user__user:
     - gid: {{user.group.gid}}
     - groups: {{user.user.groups|json}}
     - shell: {{user.user.shell}}
+    - fullname: {{user.user.fullname}}
     - system: True
 
 cinder_user__group:
