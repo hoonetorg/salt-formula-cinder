@@ -77,11 +77,7 @@ volume_clear = {{ server.wipe_method }}
 os_region_name = {{ server.identity.region|default('RegionOne') }}
 
 #l2409
-{%- if server.debug %}
-debug = True
-{%- else %}
-debug = False
-{%- endif %}
+debug = {{server.debug|default('false')}}
 
 #l2415
 #obsolete - comment out
@@ -121,7 +117,7 @@ idle_timeout = 3600
 max_pool_size = 30
 max_retries = -1
 max_overflow = 40
-connection = {{ server.database.engine }}+pymysql://{{ server.database.user }}:{{ server.database.password }}@{{ server.database.host }}/{{ server.database.name }}
+connection = {{ server.database.engine }}://{{ server.database.user }}:{{ server.database.password }}@{{ server.database.host }}/{{ server.database.name }}
 
 [keystone_authtoken]
 signing_dir = /tmp/keystone-signing-cinder
